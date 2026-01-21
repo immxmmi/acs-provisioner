@@ -1,55 +1,43 @@
-organizations:
-  - name: "admin-testhome"
-    visibility: "private"
-    email: "admin@test.ch"
-    owner: "admin"
+# ACS Provisioner Inputs
+# Configure these values for your environment
 
-robot_accounts:
-  - organization: "admin-testhome"
-    robot_shortname: "ci-bot"
-    description: "CI automation bot"
+# OIDC Configuration (if using OIDC auth provider)
+oidc_issuer: "https://login.example.com"
+oidc_client_id: "acs-client"
+oidc_client_secret: "your-secret-here"
 
-teams:
-  - organization: "admin-testhome"
-    team_name: "developers"
-    role: "creator"
-    description: "Development team"
-  - organization: "admin-testhome"
-    team_name: "viewers"
-    role: "member"
-    description: "Read-only access team"
+# Notifiers to create
+notifiers:
+  - name: "Slack-Security"
+    type: "slack"
+    slack:
+      webhook: "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+      channel: "#security-alerts"
 
-team_members:
-  - organization: "admin-testhome"
-    team_name: "developers"
-    member_name: "admin"
-  - organization: "admin-testhome"
-    team_name: "developers"
-    member_name: "admin-testhome+ci-bot"
+  - name: "Email-Security"
+    type: "email"
+    email:
+      server: "smtp.example.com"
+      port: 587
+      sender: "acs@example.com"
+      use_starttls: true
+      default_recipient: "security-team@example.com"
 
-# Default permissions for repositories created by certain users
-default_repo_permissions:
-  - organization: "admin-testhome"
-    delegate:
-      kind: "team"
-      name: "developers"
-    role: "admin"
+# Image Integrations to create
+integrations:
+  - name: "Quay-Internal"
+    type: "quay"
+    categories:
+      - "REGISTRY"
+    quay:
+      endpoint: "quay.example.com"
+      oauth_token: "your-quay-token"
+      insecure: false
 
-# LDAP Team Sync (requires LDAP to be configured in Quay)
-team_ldap_sync:
-  - organization: "admin-testhome"
-    team_name: "developers"
-    group_dn: "cn=developers,ou=groups,dc=example,dc=com"
-
-team_members_to_remove:
-  - organization: "admin-testhome"
-    team_name: "viewers"
-    member_name: "admin"
-
-team_ldap_unsync:
-  - organization: "admin-testhome"
-    team_name: "viewers"
-
-team_sync_status:
-  - organization: "admin-testhome"
-    team_name: "developers"
+  - name: "Docker-Hub"
+    type: "docker"
+    categories:
+      - "REGISTRY"
+    docker:
+      endpoint: "docker.io"
+      insecure: false

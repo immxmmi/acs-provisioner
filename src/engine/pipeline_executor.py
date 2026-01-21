@@ -3,7 +3,7 @@ import time
 from config.loader import Config
 from engine.action_registry import ACTION_REGISTRY
 from engine_reader.pipeline_reader import PipelineReader
-from quay.quay_gateway import QuayGateway
+from acs.acs_gateway import AcsGateway
 from utils.display import Display, PipelineStats, StepResult
 from utils.logger import Logger as log
 
@@ -14,7 +14,7 @@ class PipelineExecutor:
         self.reader = PipelineReader()
         self.cfg = Config()
         self.stats = PipelineStats()
-        self.gateway = QuayGateway()
+        self.gateway = AcsGateway()
 
     def run_pipeline(self, pipeline, inputs_file):
         inputs = self.reader.load_inputs(inputs_file)

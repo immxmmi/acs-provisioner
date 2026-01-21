@@ -1,26 +1,114 @@
+# ACS Provisioner Pipeline
+# This pipeline sets up ACS with OIDC auth, roles, and integrations
+
+name: acs-provisioner
+version: "1.0"
+description: "Provision ACS with authentication, RBAC, and integrations"
+
 pipeline:
-  - name: create-organizations
-    job: create_organization
+  # ============================================
+  # STEP 1: Create Permission Sets
+  # ============================================
+  - name: Create Security Analyst Permission Set
+    job: create_permission_set
     enabled: true
-    params_list: "{{ organizations }}"
+    params:
+      name: "Security-Analyst"
+      description: "Read-only access to security data"
+      resource_to_access:
+        Alert: READ_ACCESS
+        Cluster: READ_ACCESS
+        Deployment: READ_ACCESS
+        Image: READ_ACCESS
+        Policy: READ_ACCESS
+        CVE: READ_ACCESS
+        Compliance: READ_ACCESS
 
-  - name: create-robot-accounts
-    job: create_robot_account
+  - name: Create Security Admin Permission Set
+    job: create_permission_set
     enabled: true
-    params_list: "{{ robot_accounts }}"
+    params:
+      name: "Security-Admin"
+      description: "Full access to security configuration"
+      resource_to_access:
+        Alert: READ_WRITE_ACCESS
+        Cluster: READ_WRITE_ACCESS
+        Deployment: READ_ACCESS
+        Image: READ_WRITE_ACCESS
+        Policy: READ_WRITE_ACCESS
+        Integration: READ_WRITE_ACCESS
+        CVE: READ_WRITE_ACCESS
+        Compliance: READ_WRITE_ACCESS
 
-  - name: create-teams
-    job: create_team
+  # ============================================
+  # STEP 2: Create Access Scopes
+  # ============================================
+  - name: Create All Clusters Access Scope
+    job: create_access_scope
     enabled: true
-    params_list: "{{ teams }}"
+    params:
+      name: "All-Clusters"
+      description: "Access to all clusters"
+      rules: []  # Empty rules = unrestricted
 
-  - name: add-team-members
-    job: add_team_member
+  - name: Create Production Access Scope
+    job: create_access_scope
     enabled: true
-    params_list: "{{ team_members }}"
+    params:
+      name: "Production-Only"
+      description: "Access to production clusters only"
+      rules:
+        - cluster: "production"
 
-  - name: set-default-repo-permissions
-    job: set_default_repository_permission
+  # ============================================
+  # STEP 3: Create Roles
+  # ============================================
+  - name: Create Security Analyst Role
+    job: create_role
     enabled: true
-    params_list: "{{ default_repo_permissions }}"
+    params:
+      name: "Security-Analyst"
+      description: "Security analyst with read-only access"
+      permission_set_name: "Security-Analyst"
+      access_scope_name: "All-Clusters"
 
+  - name: Create Security Admin Role
+    job: create_role
+    enabled: true
+    params:
+      name: "Security-Admin"
+      description: "Security administrator with full access"
+      permission_set_name: "Security-Admin"
+      access_scope_name: "All-Clusters"
+
+  # ============================================
+  # STEP 4: Create Auth Provider (OIDC)
+  # ============================================
+  - name: Create OIDC Auth Provider
+    job: create_auth_provider
+    enabled: false  # Enable and configure for your environment
+    params:
+      name: "Company-SSO"
+      type: "oidc"
+      enabled: true
+      oidc:
+        issuer: "{{ oidc_issuer }}"
+        client_id: "{{ oidc_client_id }}"
+        client_secret: "{{ oidc_client_secret }}"
+        mode: "auto"
+
+  # ============================================
+  # STEP 5: Create Notifiers (Dynamic)
+  # ============================================
+  - name: Create Notifiers
+    job: create_notifier
+    enabled: true
+    params_list: "{{ notifiers }}"
+
+  # ============================================
+  # STEP 6: Create Image Integrations (Dynamic)
+  # ============================================
+  - name: Create Image Integrations
+    job: create_integration
+    enabled: true
+    params_list: "{{ integrations }}"
