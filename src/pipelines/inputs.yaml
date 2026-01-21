@@ -1,0 +1,55 @@
+organizations:
+  - name: "admin-testhome"
+    visibility: "private"
+    email: "admin@test.ch"
+    owner: "admin"
+
+robot_accounts:
+  - organization: "admin-testhome"
+    robot_shortname: "ci-bot"
+    description: "CI automation bot"
+
+teams:
+  - organization: "admin-testhome"
+    team_name: "developers"
+    role: "creator"
+    description: "Development team"
+  - organization: "admin-testhome"
+    team_name: "viewers"
+    role: "member"
+    description: "Read-only access team"
+
+team_members:
+  - organization: "admin-testhome"
+    team_name: "developers"
+    member_name: "admin"
+  - organization: "admin-testhome"
+    team_name: "developers"
+    member_name: "admin-testhome+ci-bot"
+
+# Default permissions for repositories created by certain users
+default_repo_permissions:
+  - organization: "admin-testhome"
+    delegate:
+      kind: "team"
+      name: "developers"
+    role: "admin"
+
+# LDAP Team Sync (requires LDAP to be configured in Quay)
+team_ldap_sync:
+  - organization: "admin-testhome"
+    team_name: "developers"
+    group_dn: "cn=developers,ou=groups,dc=example,dc=com"
+
+team_members_to_remove:
+  - organization: "admin-testhome"
+    team_name: "viewers"
+    member_name: "admin"
+
+team_ldap_unsync:
+  - organization: "admin-testhome"
+    team_name: "viewers"
+
+team_sync_status:
+  - organization: "admin-testhome"
+    team_name: "developers"

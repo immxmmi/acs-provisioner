@@ -1,0 +1,173 @@
+import os
+from typing import Any, Dict, Optional
+
+import requests
+
+from config.loader import Config
+from utils.display import Display
+from utils.logger import Logger as log
+
+# Sensitive headers that should be masked in logs
+SENSITIVE_HEADERS = {"authorization", "x-api-key", "cookie", "set-cookie"}
+DEFAULT_TIMEOUT = 30  # seconds
+
+
+class ApiClient:
+    """HTTP client with connection pooling, security features, and timeout support."""
+
+    _session: Optional[requests.Session] = None
+
+    def __init__(self):
+        cfg = Config()
+        self.cfg = cfg
+        self.timeout = int(os.getenv("API_TIMEOUT", DEFAULT_TIMEOUT))
+        self.show_curl = os.getenv("SHOW_CURL", "false").lower() == "true" or cfg.debug
+
+        log.debug("ApiClient", f"base_url={cfg.base_url}")
+        log.debug("ApiClient", f"auth_type={cfg.auth_type}")
+
+        self.base_url = cfg.base_url.rstrip("/")
+        self.headers = {
+            "Content-Type": "application/json"
+        }
+        if cfg.auth_type.lower() == "bearer":
+            self.headers["Authorization"] = f"Bearer {cfg.token}"
+        elif cfg.auth_type.lower() == "basic":
+            self.headers["Authorization"] = f"Basic {cfg.token}"
+        elif cfg.auth_type.lower() == "apikey":
+            self.headers["X-API-Key"] = cfg.token
+
+        self.headers = {k: v for k, v in self.headers.items() if v}
+        self.headers["X-Requested-With"] = "XMLHttpRequest"
+
+        disable_verify = os.getenv("DISABLE_TLS_VERIFY", "false").lower() == "true"
+        ca_bundle = os.getenv("CA_BUNDLE", "")
+
+        if disable_verify:
+            self.verify = False
+            log.debug("ApiClient", "WARNING: TLS verification is disabled")
+        elif ca_bundle:
+            self.verify = ca_bundle
+            log.debug("ApiClient", f"Using custom CA bundle: {ca_bundle}")
+        else:
+            self.verify = True  # Use system CA bundle
+
+    @property
+    def session(self) -> requests.Session:
+        """Get or create a session for connection pooling."""
+        if ApiClient._session is None:
+            ApiClient._session = requests.Session()
+        return ApiClient._session
+
+    def _mask_sensitive_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
+        """Mask sensitive header values for safe logging."""
+        masked = {}
+        for key, value in headers.items():
+            if key.lower() in SENSITIVE_HEADERS:
+                masked[key] = "***REDACTED***"
+            else:
+                masked[key] = value
+        return masked
+
+    def _request(self, method: str, endpoint: str, **kwargs) -> Any:
+        endpoint = endpoint.strip("/")
+        url = f"{self.base_url}/{endpoint}"
+        body = kwargs.get("json")
+
+        # Show API call with optional CURL command
+        if self.show_curl:
+            Display.api_call(
+                method=method,
+                endpoint=f"/{endpoint}",
+                show_curl=True,
+                url=url,
+                headers=self.headers,
+                body=body
+            )
+
+        log.debug("ApiClient", f"Calling {method} {url}")
+
+        try:
+            response = self.session.request(
+                method=method,
+                url=url,
+                headers=self.headers,
+                verify=self.verify,
+                allow_redirects=False,
+                timeout=self.timeout,
+                **kwargs
+            )
+        except requests.ConnectionError as e:
+            log.error("ApiClient", f"Connection refused when calling {url}: {e}")
+            raise e
+        except requests.Timeout as e:
+            log.error("ApiClient", f"Request timeout when calling {url}: {e}")
+            raise e
+        except requests.RequestException as e:
+            log.error("ApiClient", f"Unexpected request error: {e}")
+            raise e
+
+        if response.status_code in (301, 302, 307, 308) and "Location" in response.headers:
+            redirect_url = response.headers["Location"]
+            # Fix redirect URL if it's missing the port
+            if redirect_url.startswith("http://127.0.0.1/") or redirect_url.startswith("http://localhost/"):
+                from urllib.parse import urlparse, urlunparse
+                parsed_base = urlparse(self.base_url)
+                parsed_redirect = urlparse(redirect_url)
+                # Replace host:port with our configured host:port
+                fixed_redirect = urlunparse((
+                    parsed_base.scheme,
+                    parsed_base.netloc,  # includes port
+                    parsed_redirect.path,
+                    parsed_redirect.params,
+                    parsed_redirect.query,
+                    parsed_redirect.fragment
+                ))
+                log.debug("ApiClient", f"Fixed redirect URL: {redirect_url} -> {fixed_redirect}")
+                redirect_url = fixed_redirect
+            else:
+                log.debug("ApiClient", f"Following redirect to: {redirect_url}")
+            # Preserve original request body and other kwargs for the redirect
+            response = self.session.request(
+                method=method,
+                url=redirect_url,
+                headers=self.headers,
+                verify=self.verify,
+                timeout=self.timeout,
+                **kwargs  # Pass original kwargs (includes json body)
+            )
+
+        # Raise HTTP errors (4xx, 5xx)
+        if response.status_code == 404 and method == "GET":
+            return None
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError:
+            log.error("ApiClient", f"HTTP {response.status_code} on {method} {url} body={response.text}")
+            raise
+
+        if not response.text or not response.text.strip():
+            return {}
+
+        try:
+            return response.json()
+        except ValueError:
+            log.debug("ApiClient", "Non-JSON response received")
+            return {
+                "warning": "Non-JSON response",
+                "status": response.status_code,
+                "raw": response.text
+            }
+
+    def get(self, endpoint, **kwargs):
+        return self._request("GET", endpoint, **kwargs)
+
+    def post(self, endpoint, **kwargs):
+        return self._request("POST", endpoint, **kwargs)
+
+    def put(self, endpoint, **kwargs):
+        return self._request("PUT", endpoint, **kwargs)
+
+    def delete(self, endpoint, **kwargs):
+        return self._request("DELETE", endpoint, **kwargs)
