@@ -5,185 +5,59 @@ Pipeline-based provisioner for **Red Hat Advanced Cluster Security (ACS/StackRox
 Automate the configuration of:
 - **Auth Providers** (OIDC, SAML, LDAP)
 - **Roles & RBAC** (Permission Sets, Access Scopes, Roles)
-- **Notifiers** (Slack, Email, Jira, PagerDuty, Splunk)
+- **Notifiers** (Jira, Email, Splunk, Syslog, PagerDuty, Generic Webhook, CSCC, Sumologic, AWS Security Hub, Microsoft Sentinel)
 - **Image Integrations** (Quay, Docker, ECR, GCR, ACR)
 - **Security Policies**
 
 ## Quick Start
 
 ```bash
-# 1. Configure environment
+# 1. Setup
+make setup
+source .venv/bin/activate
+
+# 2. Configure environment
 cp .env.example .env
 # Edit .env with your ACS Central URL and API token
 
-# 2. Configure pipeline
+# 3. Configure pipeline
 # Edit src/pipelines/pipeline.yaml and inputs.yaml
 
-# 3. Run
+# 4. Run
 make run
 ```
 
-## Local RHACS (ACS) Setup for API Testing
-
-For local development and API testing, this repository includes a dedicated Makefile to spin up **Minikube with Red Hat Advanced Cluster Security (ACS/RHACS)**.
-
-The Makefile is located at:
-
-```
-environment/Makefile
-```
-
-### Prerequisites
-
-- Docker
-- kubectl
-- minikube
-- curl
-- make
-
-### What the Makefile does
-
-The environment Makefile automates the following steps:
-
-- Starts a Minikube cluster with sufficient resources
-- Downloads `roxctl` if not present
-- Deploys **ACS Central**
-- Deploys **Secured Cluster Services**
-- Exposes the Central API and UI locally
-
-This setup is intended **only for development and testing**.
-
-### Usage
+## Available Make Commands
 
 ```bash
-cd environment
+make help          # Show all commands
 
-# Start Minikube and install ACS
-make up
+# Main
+make run           # Run the provisioner
+make run-debug     # Run with debug logging
+make test          # Run tests
+make test-models   # Test model imports
+
+# Setup
+make install       # Install dependencies
+make venv          # Create virtual environment
+make setup         # Full setup (venv + install)
+
+# Development
+make lint          # Run linter
+make format        # Format code with black
+make clean         # Clean cache files
+
+# Docker
+make build         # Build Docker image
+make docker-run    # Run in Docker
+
+# RHACS Environment (Minikube)
+make env-up        # Start Minikube with ACS
+make env-down      # Stop Minikube
+make env-status    # Show ACS pod status
+make env-ui        # Port-forward ACS UI
 ```
-
-After deployment:
-
-```bash
-# Forward Central UI and API
-make ui
-```
-
-- UI: https://localhost:8443  
-- API base: https://localhost:8443/v1  
-- Default user: `admin`
-
-### Tear down
-
-```bash
-cd environment
-make down
-```
-
-### Use with ACS Provisioner
-
-Once ACS is running locally, configure your `.env` file as follows:
-
-```env
-API_HOST=localhost
-API_PORT=8443
-API_BASE_PATH=/
-API_AUTH_TYPE=bearer
-API_TOKEN=<GENERATED_TOKEN>
-DISABLE_TLS_VERIFY=true
-```
-
-You can then run the provisioner against the local ACS instance:
-
-```bash
-make run
-```
-
-This allows full end-to-end testing of:
-- ACS API integration
-- Pipelines
-- Actions (Auth Providers, Roles, Policies, Notifiers, Integrations)
-
-## Local RHACS (ACS) Setup for API Testing
-
-For local development and API testing, this repository includes a dedicated Makefile to spin up **Minikube with Red Hat Advanced Cluster Security (ACS/RHACS)**.
-
-The Makefile is located at:
-
-```
-environment/Makefile
-```
-
-### Prerequisites
-
-- Docker
-- kubectl
-- minikube
-- curl
-- make
-
-### What the Makefile does
-
-The environment Makefile automates the following steps:
-
-- Starts a Minikube cluster with sufficient resources
-- Downloads `roxctl` if not present
-- Deploys **ACS Central**
-- Deploys **Secured Cluster Services**
-- Exposes the Central API and UI locally
-
-This setup is intended **only for development and testing**.
-
-### Usage
-
-```bash
-cd environment
-
-# Start Minikube and install ACS
-make up
-```
-
-After deployment:
-
-```bash
-# Forward Central UI and API
-make ui
-```
-
-- UI: https://localhost:8443  
-- API base: https://localhost:8443/v1  
-- Default user: `admin`
-
-### Tear down
-
-```bash
-cd environment
-make down
-```
-
-### Use with ACS Provisioner
-
-Once ACS is running locally, configure your `.env` file as follows:
-
-```env
-API_HOST=localhost
-API_PORT=8443
-API_BASE_PATH=/
-API_AUTH_TYPE=bearer
-API_TOKEN=<GENERATED_TOKEN>
-DISABLE_TLS_VERIFY=true
-```
-
-You can then run the provisioner against the local ACS instance:
-
-```bash
-make run
-```
-
-This allows full end-to-end testing of:
-- ACS API integration
-- Pipelines
-- Actions (Auth Providers, Roles, Policies, Notifiers, Integrations)
 
 ## Configuration
 
@@ -201,7 +75,7 @@ This allows full end-to-end testing of:
 ### Getting an API Token
 
 1. Log into ACS Central UI
-2. Go to **Platform Configuration → Integrations → Authentication Tokens**
+2. Go to **Platform Configuration > Integrations > Authentication Tokens**
 3. Click **Generate Token**
 4. Select role with appropriate permissions
 5. Copy the token to your `.env` file
@@ -211,29 +85,53 @@ This allows full end-to-end testing of:
 ```yaml
 # pipeline.yaml
 pipeline:
-  - name: Create Permission Set
-    job: create_permission_set
-    enabled: true
-    params:
-      name: "Security-Analyst"
-      resource_to_access:
-        Alert: READ_ACCESS
-        Policy: READ_ACCESS
-
-  - name: Create Notifiers
+  - name: Create Jira Notifier
     job: create_notifier
     enabled: true
-    params_list: "{{ notifiers }}"  # Dynamic from inputs.yaml
+    params_list: "{{ notifiers }}"
 ```
 
 ```yaml
 # inputs.yaml
 notifiers:
-  - name: "Slack-Security"
-    type: "slack"
-    slack:
-      webhook: "https://hooks.slack.com/..."
+  - id: "jira-001"
+    name: "Jira-Security"
+    type: "jira"
+    uiEndpoint: "https://acs.example.com"
+    labelKey: "notifier.jira"
+    labelDefault: "Jira Notifier"
+    traits:
+      mutabilityMode: "ALLOW_MUTATE"
+      visibility: "VISIBLE"
+      origin: "IMPERATIVE"
+    jira:
+      url: "https://jira.example.com"
+      username: "acs-service"
+      password: "api-token"
+      issueType: "Bug"
+      priorityMappings:
+        - severity: "CRITICAL_SEVERITY"
+          priorityName: "Highest"
+        - severity: "HIGH_SEVERITY"
+          priorityName: "High"
+      defaultFieldsJson: '{"project": {"key": "SEC"}}'
+      disablePriority: false
 ```
+
+## Notifier Types
+
+| Type | Config Object | Description |
+|------|---------------|-------------|
+| `jira` | `JiraConfig` | Jira issue integration |
+| `email` | `EmailConfig` | SMTP email notifications |
+| `splunk` | `SplunkConfig` | Splunk HEC integration |
+| `syslog` | `SyslogConfig` | Syslog (CEF/Legacy) |
+| `pagerduty` | `PagerDutyConfig` | PagerDuty incidents |
+| `generic` | `GenericConfig` | Generic webhook |
+| `cscc` | `CsccConfig` | Google Cloud Security Command Center |
+| `sumologic` | `SumologicConfig` | Sumologic HTTP source |
+| `awsSecurityHub` | `AwsSecurityHubConfig` | AWS Security Hub |
+| `microsoftSentinel` | `MicrosoftSentinelConfig` | Microsoft Sentinel |
 
 ## Available Actions
 
@@ -260,25 +158,6 @@ notifiers:
 - `create_policy` / `get_policy` / `list_policies` / `delete_policy`
 - `enable_policy` / `disable_policy`
 
-## Development
-
-```bash
-# Run tests
-make test
-
-# Run with debug output
-make run-debug
-
-# Lint code
-make lint
-
-# Build Docker image
-make build TAG=1.0.0
-
-# Show all commands
-make help
-```
-
 ## Architecture
 
 ```
@@ -294,6 +173,7 @@ src/
 │   │   ├── integration/
 │   │   └── policy/
 │   └── model/              # Pydantic models
+│       └── notifier/       # Notifier models (split by type)
 ├── engine/                 # Generic pipeline engine
 ├── gateway/                # Generic API client
 └── pipelines/              # YAML pipeline definitions
@@ -309,98 +189,29 @@ make build
 docker run --rm \
   -e API_HOST=central.example.com \
   -e API_TOKEN=your-token \
-  -v $(pwd)/pipelines:/app/pipelines \
+  -v $(pwd)/src/pipelines:/app/pipelines \
   acs-provisioner:latest
 ```
 
-## Helm
+## Local RHACS Setup (Development)
+
+For local development and API testing:
 
 ```bash
-# Install
-make helm-install HELM_NAMESPACE=rhacs-system
+# Start Minikube with ACS
+make env-up
 
-# Upgrade
-make helm-upgrade
-```
+# Port-forward UI (https://localhost:8443)
+make env-ui
 
-
-## Local RHACS (ACS) Setup for API Testing
-
-For local development and API testing, this repository includes a dedicated Makefile to spin up **Minikube with Red Hat Advanced Cluster Security (ACS/RHACS)**.
-
-The Makefile is located at:
-
-```
-environment/Makefile
-```
-
-### Prerequisites
-
-- Docker
-- kubectl
-- minikube
-- curl
-- make
-
-### What the Makefile does
-
-The environment Makefile automates the following steps:
-
-- Starts a Minikube cluster with sufficient resources
-- Downloads `roxctl` if not present
-- Deploys **ACS Central**
-- Deploys **Secured Cluster Services**
-- Exposes the Central API and UI locally
-
-This setup is intended **only for development and testing**.
-
-### Usage
-
-```bash
-cd environment
-
-# Start Minikube and install ACS
-make up
-```
-
-After deployment:
-
-```bash
-# Forward Central UI and API
-make ui
-```
-
-- UI: https://localhost:8443  
-- API base: https://localhost:8443/v1  
-- Default user: `admin`
-
-### Tear down
-
-```bash
-cd environment
-make down
-```
-
-### Use with ACS Provisioner
-
-Once ACS is running locally, configure your `.env` file as follows:
-
-```env
+# Configure .env for local
 API_HOST=localhost
 API_PORT=8443
-API_BASE_PATH=/
-API_AUTH_TYPE=bearer
-API_TOKEN=<GENERATED_TOKEN>
 DISABLE_TLS_VERIFY=true
-```
 
-You can then run the provisioner against the local ACS instance:
-
-```bash
+# Run provisioner
 make run
-```
 
-This allows full end-to-end testing of:
-- ACS API integration
-- Pipelines
-- Actions (Auth Providers, Roles, Policies, Notifiers, Integrations)
+# Tear down
+make env-down
+```
