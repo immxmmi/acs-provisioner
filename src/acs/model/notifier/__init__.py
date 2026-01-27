@@ -5,10 +5,10 @@ from .jira import JiraConfig, JiraPriorityMapping
 from .email import EmailConfig, StartTLSAuthMethod
 from .splunk import SplunkConfig
 from .pagerduty import PagerDutyConfig
-from .generic import GenericConfig, WebhookConfig
+from .generic import GenericConfig
 from .cscc import CsccConfig
 from .sumologic import SumologicConfig
-from .aws_security_hub import AwsSecurityHubConfig
+from .aws_security_hub import AwsSecurityHubConfig, AwsSecurityHubCredentials
 from .syslog import SyslogConfig, LocalFacility, MessageFormat
 from .microsoft_sentinel import MicrosoftSentinelConfig, DcrConfig, ClientCertAuthConfig
 from .common import NotifierSecret, Traits, MutabilityMode, Visibility, Origin
@@ -23,10 +23,10 @@ __all__ = [
     "SplunkConfig",
     "PagerDutyConfig",
     "GenericConfig",
-    "WebhookConfig",
     "CsccConfig",
     "SumologicConfig",
     "AwsSecurityHubConfig",
+    "AwsSecurityHubCredentials",
     "SyslogConfig",
     "LocalFacility",
     "MessageFormat",

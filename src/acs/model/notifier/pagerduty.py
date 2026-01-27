@@ -4,4 +4,5 @@ from pydantic import BaseModel
 
 
 class PagerDutyConfig(BaseModel):
-    api_key: str
+    """PagerDuty notifier configuration."""
+    apiKey: str

@@ -8,20 +8,132 @@ oidc_client_secret: "your-secret-here"
 
 # Notifiers to create
 notifiers:
-  - name: "Slack-Security"
-    type: "slack"
-    slack:
-      webhook: "https://hooks.slack.com/services/XXX/YYY/ZZZ"
-      channel: "#security-alerts"
+  # Jira Example
+  - id: "jira-notifier-001"
+    name: "Jira-Security"
+    type: "jira"
+    uiEndpoint: "https://acs.example.com"
+    labelKey: "notifier.jira"
+    labelDefault: "Jira Security Notifier"
+    traits:
+      mutabilityMode: "ALLOW_MUTATE"
+      visibility: "VISIBLE"
+      origin: "IMPERATIVE"
+    jira:
+      url: "https://jira.example.com"
+      username: "acs-service"
+      password: "your-api-token"
+      issueType: "Bug"
+      priorityMappings:
+        - severity: "CRITICAL_SEVERITY"
+          priorityName: "Highest"
+        - severity: "HIGH_SEVERITY"
+          priorityName: "High"
+        - severity: "MEDIUM_SEVERITY"
+          priorityName: "Medium"
+        - severity: "LOW_SEVERITY"
+          priorityName: "Low"
+        - severity: "UNSET_SEVERITY"
+          priorityName: "Lowest"
+      defaultFieldsJson: '{"project": {"key": "SEC"}}'
+      disablePriority: false
 
-  - name: "Email-Security"
+  # Email Example
+  - id: "email-notifier-001"
+    name: "Email-Security"
     type: "email"
+    uiEndpoint: "https://acs.example.com"
+    labelKey: "notifier.email"
+    labelDefault: "Email Security Notifier"
+    traits:
+      mutabilityMode: "ALLOW_MUTATE"
+      visibility: "VISIBLE"
+      origin: "IMPERATIVE"
     email:
       server: "smtp.example.com"
-      port: 587
       sender: "acs@example.com"
-      use_starttls: true
-      default_recipient: "security-team@example.com"
+      username: "smtp-user"
+      password: "smtp-password"
+      disableTLS: false
+      DEPRECATEDUseStartTLS: false
+      from: "acs-alerts@example.com"
+      startTLSAuthMethod: "PLAIN"
+      allowUnauthenticatedSmtp: false
+      skipTLSVerify: false
+      hostnameHeloEhlo: "acs.example.com"
+
+  # Splunk Example
+  - id: "splunk-notifier-001"
+    name: "Splunk-SIEM"
+    type: "splunk"
+    uiEndpoint: "https://acs.example.com"
+    labelKey: "notifier.splunk"
+    labelDefault: "Splunk SIEM Notifier"
+    traits:
+      mutabilityMode: "ALLOW_MUTATE"
+      visibility: "VISIBLE"
+      origin: "IMPERATIVE"
+    splunk:
+      httpToken: "your-splunk-hec-token"
+      httpEndpoint: "https://splunk.example.com:8088/services/collector"
+      insecure: false
+      truncate: 10000
+      auditLoggingEnabled: true
+      derivedSourceType: false
+      sourceType:
+        source: "acs"
+        sourcetype: "acs:alerts"
+
+  # Syslog Example
+  - id: "syslog-notifier-001"
+    name: "Syslog-SIEM"
+    type: "syslog"
+    uiEndpoint: "https://acs.example.com"
+    labelKey: "notifier.syslog"
+    labelDefault: "Syslog SIEM Notifier"
+    traits:
+      mutabilityMode: "ALLOW_MUTATE"
+      visibility: "VISIBLE"
+      origin: "IMPERATIVE"
+    syslog:
+      localFacility: "LOCAL0"
+      messageFormat: "CEF"
+      maxMessageSize: 65536
+
+  # PagerDuty Example
+  - id: "pagerduty-notifier-001"
+    name: "PagerDuty-Oncall"
+    type: "pagerduty"
+    uiEndpoint: "https://acs.example.com"
+    labelKey: "notifier.pagerduty"
+    labelDefault: "PagerDuty Oncall Notifier"
+    traits:
+      mutabilityMode: "ALLOW_MUTATE"
+      visibility: "VISIBLE"
+      origin: "IMPERATIVE"
+    pagerduty:
+      apiKey: "your-pagerduty-integration-key"
+
+  # Generic Webhook Example
+  - id: "generic-notifier-001"
+    name: "Generic-Webhook"
+    type: "generic"
+    uiEndpoint: "https://acs.example.com"
+    labelKey: "notifier.generic"
+    labelDefault: "Generic Webhook Notifier"
+    traits:
+      mutabilityMode: "ALLOW_MUTATE"
+      visibility: "VISIBLE"
+      origin: "IMPERATIVE"
+    generic:
+      endpoint: "https://webhook.example.com/acs-alerts"
+      skipTLSVerify: false
+      username: "webhook-user"
+      password: "webhook-password"
+      headers:
+        - key: "X-Custom-Header"
+          value: "custom-value"
+      auditLoggingEnabled: false
 
 # Image Integrations to create
 integrations:
