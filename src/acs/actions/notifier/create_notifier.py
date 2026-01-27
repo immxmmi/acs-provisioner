@@ -3,7 +3,7 @@
 from ..base_action import BaseAction
 from .get_notifier import GetNotifierAction
 from model.action_response import ActionResponse
-from acs.model.notifier_model import Notifier
+from acs.model.notifier import Notifier
 from utils.logger import Logger as log
 
 
