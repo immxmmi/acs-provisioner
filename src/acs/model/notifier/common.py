@@ -24,11 +24,6 @@ class Origin(str, Enum):
     DECLARATIVE_ORPHANED = "DECLARATIVE_ORPHANED"
 
 
-class NotifierSecret(BaseModel):
-    """Notifier secret configuration."""
-    secret: Optional[str] = None
-
-
 class Traits(BaseModel):
     """Notifier traits."""
     mutabilityMode: MutabilityMode

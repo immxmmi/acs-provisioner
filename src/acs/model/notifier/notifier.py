@@ -14,7 +14,7 @@ from .sumologic import SumologicConfig
 from .aws_security_hub import AwsSecurityHubConfig
 from .syslog import SyslogConfig
 from .microsoft_sentinel import MicrosoftSentinelConfig
-from .common import NotifierSecret, Traits
+from .common import Traits
 
 
 class Notifier(BaseModel):
@@ -38,7 +38,7 @@ class Notifier(BaseModel):
     awsSecurityHub: Optional[AwsSecurityHubConfig] = None
     syslog: Optional[SyslogConfig] = None
     microsoftSentinel: Optional[MicrosoftSentinelConfig] = None
-    notifierSecret: Optional[NotifierSecret] = None
+    notifierSecret: Optional[str] = None
     traits: Optional[Traits] = None
 
     class Config:
@@ -65,7 +65,7 @@ class Notifier(BaseModel):
 
         # Add notifierSecret if present
         if self.notifierSecret:
-            payload["notifierSecret"] = {"secret": self.notifierSecret.secret}
+            payload["notifierSecret"] = self.notifierSecret
 
         # Type-specific payloads
         if self.type == NotifierType.EMAIL and self.email:

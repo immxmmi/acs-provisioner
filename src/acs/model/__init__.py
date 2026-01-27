@@ -14,7 +14,6 @@ from .notifier import (
     SyslogConfig, LocalFacility, MessageFormat,
     MicrosoftSentinelConfig, DcrConfig, ClientCertAuthConfig,
     Traits, MutabilityMode, Visibility, Origin,
-    NotifierSecret,
 )
 from .integration_model import ImageIntegration, DockerConfig, QuayConfig
 from .policy_model import Policy, PolicySection, POLICY_CATEGORIES, SEVERITY_LEVELS
@@ -34,7 +33,6 @@ __all__ = [
     "SyslogConfig", "LocalFacility", "MessageFormat",
     "MicrosoftSentinelConfig", "DcrConfig", "ClientCertAuthConfig",
     "Traits", "MutabilityMode", "Visibility", "Origin",
-    "NotifierSecret",
     # Other models
     "ImageIntegration", "DockerConfig", "QuayConfig",
     "Policy", "PolicySection", "POLICY_CATEGORIES", "SEVERITY_LEVELS",
