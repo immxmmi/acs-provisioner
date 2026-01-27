@@ -1,5 +1,11 @@
 import sys
+import os
 from datetime import datetime
+
+# Ensure src directory is in Python path
+src_dir = os.path.dirname(os.path.abspath(__file__))
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
 
 from config.loader import Config
 from engine.pipeline_engine import PipelineEngine
