@@ -20,7 +20,7 @@ from .common import Traits
 class Notifier(BaseModel):
     """ACS Notifier model."""
     # Required fields
-    id: str
+    id: Optional[str] = None
     name: str
     type: NotifierType
     uiEndpoint: str
@@ -47,13 +47,15 @@ class Notifier(BaseModel):
     def to_api_payload(self) -> dict:
         """Convert to ACS API payload format."""
         payload = {
-            "id": self.id,
             "name": self.name,
             "type": self.type.value,
             "uiEndpoint": self.uiEndpoint,
             "labelKey": self.labelKey,
             "labelDefault": self.labelDefault,
         }
+
+        if self.id:
+            payload["id"] = self.id
 
         # Add traits if present
         if self.traits:
