@@ -10,7 +10,7 @@ from .cscc import CsccConfig
 from .sumologic import SumologicConfig
 from .aws_security_hub import AwsSecurityHubConfig
 from .syslog import SyslogConfig, LocalFacility, MessageFormat
-from .microsoft_sentinel import MicrosoftSentinelConfig
+from .microsoft_sentinel import MicrosoftSentinelConfig, DcrConfig, ClientCertAuthConfig
 from .common import NotifierSecret, Traits, MutabilityMode, Visibility, Origin
 from .notifier import Notifier
 
@@ -31,6 +31,8 @@ __all__ = [
     "LocalFacility",
     "MessageFormat",
     "MicrosoftSentinelConfig",
+    "DcrConfig",
+    "ClientCertAuthConfig",
     "NotifierSecret",
     "Traits",
     "MutabilityMode",
