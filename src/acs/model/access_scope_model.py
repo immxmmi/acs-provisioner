@@ -1,6 +1,6 @@
 """Pydantic models for ACS Access Scopes."""
 
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 
 
@@ -12,7 +12,7 @@ class ClusterScope(BaseModel):
 
 class LabelSelector(BaseModel):
     """Label selector for scope rules."""
-    requirements: List[Dict[str, any]]
+    requirements: List[Dict[str, Any]]
 
 
 class AccessScope(BaseModel):

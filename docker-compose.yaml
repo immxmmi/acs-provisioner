@@ -1,9 +1,9 @@
 version: "3.9"
 
 services:
-  quay-provisioner:
-    image: ghcr.io/immxmmi/quay-provisioner:latest
-    container_name: quay-provisioner
+  acs-provisioner:
+    image: ghcr.io/immxmmi/acs-provisioner:latest
+    container_name: acs-provisioner
     restart: "no"
 
     environment:
