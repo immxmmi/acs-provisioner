@@ -20,8 +20,13 @@ class CreatePolicyAction(BaseAction):
             existing = GetPolicyAction(gateway=self.gateway).find_by_name(policy.name)
 
             if existing:
-                log.info("CreatePolicyAction", f"Policy already exists: {policy.name}")
-                return ActionResponse(success=True, data={"policy": policy.name, "id": existing.get("id")})
+                log.info("CreatePolicyAction", f"Policy already exists, updating: {policy.name}")
+                merged = {**existing, **data}
+                policy = Policy(**merged)
+                payload = policy.to_api_payload()
+                result = self.gateway.update_policy(existing["id"], payload)
+                log.info("CreatePolicyAction", "Policy updated successfully")
+                return ActionResponse(success=True, data={"policy": policy.name, "id": existing["id"], "result": result})
 
             # Create new policy
             payload = policy.to_api_payload()

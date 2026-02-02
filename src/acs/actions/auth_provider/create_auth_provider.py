@@ -20,8 +20,13 @@ class CreateAuthProviderAction(BaseAction):
             existing = GetAuthProviderAction(gateway=self.gateway).find_by_name(provider.name)
 
             if existing:
-                log.info("CreateAuthProviderAction", f"Auth provider already exists: {provider.name}")
-                return ActionResponse(success=True, data={"auth_provider": provider.name, "id": existing.get("id")})
+                log.info("CreateAuthProviderAction", f"Auth provider already exists, updating: {provider.name}")
+                merged = {**existing, **data}
+                provider = AuthProvider(**merged)
+                payload = provider.to_api_payload()
+                result = self.gateway.update_auth_provider(existing["id"], payload)
+                log.info("CreateAuthProviderAction", "Auth provider updated successfully")
+                return ActionResponse(success=True, data={"auth_provider": provider.name, "id": existing["id"], "result": result})
 
             # Create new auth provider
             payload = provider.to_api_payload()

@@ -13,7 +13,15 @@ class ListNotifiersAction(BaseAction):
             result = self.gateway.list_notifiers()
             notifiers = result.get("notifiers", [])
 
-            log.info("ListNotifiersAction", f"Found {len(notifiers)} notifiers")
+            log.info("ListNotifiersAction", f"Found {len(notifiers)} notifiers:")
+
+            # Display each notifier
+            for n in notifiers:
+                name = n.get("name", "Unknown")
+                n_type = n.get("type", "Unknown")
+                n_id = n.get("id", "")[:8] + "..." if n.get("id") else ""
+                log.info("ListNotifiersAction", f"  - {name} ({n_type}) [{n_id}]")
+
             return ActionResponse(
                 success=True,
                 data={"notifiers": notifiers, "count": len(notifiers)}

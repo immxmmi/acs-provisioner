@@ -20,8 +20,13 @@ class CreateNotifierAction(BaseAction):
             existing = GetNotifierAction(gateway=self.gateway).find_by_name(notifier.name)
 
             if existing:
-                log.info("CreateNotifierAction", f"Notifier already exists: {notifier.name}")
-                return ActionResponse(success=True, data={"notifier": notifier.name, "id": existing.get("id")})
+                log.info("CreateNotifierAction", f"Notifier already exists, updating: {notifier.name}")
+                merged = {**existing, **data}
+                notifier = Notifier(**merged)
+                payload = notifier.to_api_payload()
+                result = self.gateway.update_notifier(existing["id"], payload)
+                log.info("CreateNotifierAction", "Notifier updated successfully")
+                return ActionResponse(success=True, data={"notifier": notifier.name, "id": existing["id"], "result": result})
 
             # Create new notifier
             payload = notifier.to_api_payload()

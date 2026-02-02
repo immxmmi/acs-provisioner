@@ -18,14 +18,18 @@ from .common import Traits
 
 
 class Notifier(BaseModel):
-    """ACS Notifier model."""
-    # Required fields
+    """ACS Notifier model.
+
+    All fields optional to support both:
+    - Create: provide the fields you need
+    - GET/List: no fields needed, response comes from server
+    """
     id: Optional[str] = None
-    name: str
-    type: NotifierType
-    uiEndpoint: str
-    labelKey: str
-    labelDefault: str
+    name: Optional[str] = None
+    type: Optional[NotifierType] = None
+    uiEndpoint: Optional[str] = None
+    labelKey: Optional[str] = None
+    labelDefault: Optional[str] = None
 
     # Type-specific configs (optional)
     jira: Optional[JiraConfig] = None
@@ -46,16 +50,20 @@ class Notifier(BaseModel):
 
     def to_api_payload(self) -> dict:
         """Convert to ACS API payload format."""
-        payload = {
-            "name": self.name,
-            "type": self.type.value,
-            "uiEndpoint": self.uiEndpoint,
-            "labelKey": self.labelKey,
-            "labelDefault": self.labelDefault,
-        }
+        payload = {}
 
         if self.id:
             payload["id"] = self.id
+        if self.name:
+            payload["name"] = self.name
+        if self.type:
+            payload["type"] = self.type.value
+        if self.uiEndpoint:
+            payload["uiEndpoint"] = self.uiEndpoint
+        if self.labelKey:
+            payload["labelKey"] = self.labelKey
+        if self.labelDefault:
+            payload["labelDefault"] = self.labelDefault
 
         # Add traits if present
         if self.traits:

@@ -20,8 +20,13 @@ class CreatePermissionSetAction(BaseAction):
             existing = GetPermissionSetAction(gateway=self.gateway).find_by_name(perm_set.name)
 
             if existing:
-                log.info("CreatePermissionSetAction", f"Permission set already exists: {perm_set.name}")
-                return ActionResponse(success=True, data={"permission_set": perm_set.name, "id": existing.get("id")})
+                log.info("CreatePermissionSetAction", f"Permission set already exists, updating: {perm_set.name}")
+                merged = {**existing, **data}
+                perm_set = PermissionSet(**merged)
+                payload = perm_set.to_api_payload()
+                result = self.gateway.update_permission_set(existing["id"], payload)
+                log.info("CreatePermissionSetAction", "Permission set updated successfully")
+                return ActionResponse(success=True, data={"permission_set": perm_set.name, "id": existing["id"], "result": result})
 
             # Create new permission set
             payload = perm_set.to_api_payload()

@@ -20,8 +20,19 @@ class CreateRoleAction(BaseAction):
             existing = GetRoleAction(gateway=self.gateway).find_by_name(role.name)
 
             if existing:
-                log.info("CreateRoleAction", f"Role already exists: {role.name}")
-                return ActionResponse(success=True, data={"role": role.name})
+                log.info("CreateRoleAction", f"Role already exists, updating: {role.name}")
+                merged = {**existing, **data}
+                role = Role(**merged)
+
+                if role.permission_set_name and not role.permission_set_id:
+                    role.permission_set_id = self._resolve_permission_set(role.permission_set_name)
+                if role.access_scope_name and not role.access_scope_id:
+                    role.access_scope_id = self._resolve_access_scope(role.access_scope_name)
+
+                payload = role.to_api_payload()
+                result = self.gateway.update_role(existing["name"], payload)
+                log.info("CreateRoleAction", "Role updated successfully")
+                return ActionResponse(success=True, data={"role": role.name, "result": result})
 
             # Resolve permission set and access scope by name if needed
             if role.permission_set_name and not role.permission_set_id:

@@ -20,8 +20,13 @@ class CreateIntegrationAction(BaseAction):
             existing = GetIntegrationAction(gateway=self.gateway).find_by_name(integration.name)
 
             if existing:
-                log.info("CreateIntegrationAction", f"Integration already exists: {integration.name}")
-                return ActionResponse(success=True, data={"integration": integration.name, "id": existing.get("id")})
+                log.info("CreateIntegrationAction", f"Integration already exists, updating: {integration.name}")
+                merged = {**existing, **data}
+                integration = ImageIntegration(**merged)
+                payload = integration.to_api_payload()
+                result = self.gateway.update_image_integration(existing["id"], payload)
+                log.info("CreateIntegrationAction", "Integration updated successfully")
+                return ActionResponse(success=True, data={"integration": integration.name, "id": existing["id"], "result": result})
 
             # Create new integration
             payload = integration.to_api_payload()

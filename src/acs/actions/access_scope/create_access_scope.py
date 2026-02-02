@@ -20,8 +20,13 @@ class CreateAccessScopeAction(BaseAction):
             existing = GetAccessScopeAction(gateway=self.gateway).find_by_name(scope.name)
 
             if existing:
-                log.info("CreateAccessScopeAction", f"Access scope already exists: {scope.name}")
-                return ActionResponse(success=True, data={"access_scope": scope.name, "id": existing.get("id")})
+                log.info("CreateAccessScopeAction", f"Access scope already exists, updating: {scope.name}")
+                merged = {**existing, **data}
+                scope = AccessScope(**merged)
+                payload = scope.to_api_payload()
+                result = self.gateway.update_access_scope(existing["id"], payload)
+                log.info("CreateAccessScopeAction", "Access scope updated successfully")
+                return ActionResponse(success=True, data={"access_scope": scope.name, "id": existing["id"], "result": result})
 
             # Create new access scope
             payload = scope.to_api_payload()
