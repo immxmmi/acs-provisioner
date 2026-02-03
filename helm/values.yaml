@@ -1,0 +1,211 @@
+# =============================================================================
+# Quay Provisioner Helm Chart - Values
+# =============================================================================
+
+# -- Override the name of the chart
+nameOverride: ""
+# -- Override the full name of the chart
+fullnameOverride: ""
+
+# =============================================================================
+# Namespace Configuration
+# =============================================================================
+namespace:
+  # -- Create the namespace
+  create: false
+  # -- Namespace name (uses Release.Namespace if not set)
+  name: ""
+  # -- Annotations for the namespace
+  annotations: { }
+  # -- Labels for the namespace
+  labels: { }
+
+# =============================================================================
+# Image Configuration
+# =============================================================================
+image:
+  # -- Container image repository
+  repository: ghcr.io/immxmmi/quay-provisioner
+  # -- Container image tag (defaults to Chart.appVersion)
+  tag: ""
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+
+# -- Image pull secrets for private registries
+imagePullSecrets: [ ]
+# - name: my-registry-secret
+
+# =============================================================================
+# Service Account
+# =============================================================================
+serviceAccount:
+  # -- Create a service account
+  create: true
+  # -- Service account name (generated if not set)
+  name: ""
+  # -- Annotations for the service account
+  annotations: { }
+
+# =============================================================================
+# Job Configuration
+# =============================================================================
+job:
+  # -- Number of retries before marking job as failed
+  backoffLimit: 3
+  # -- Seconds to keep job after completion (cleanup)
+  ttlSecondsAfterFinished: 300
+  # -- Restart policy (Never or OnFailure)
+  restartPolicy: Never
+  # -- Additional annotations for the job (ArgoCD hooks enabled by default)
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+  # -- Additional labels for the job
+  labels: { }
+
+# =============================================================================
+# Pod Configuration
+# =============================================================================
+pod:
+  # -- Additional annotations for the pod
+  annotations: { }
+  # -- Additional labels for the pod
+  labels: { }
+  # -- Node selector for pod scheduling
+  nodeSelector: { }
+  # -- Tolerations for pod scheduling
+  tolerations: [ ]
+  # -- Affinity rules for pod scheduling
+  affinity: { }
+  # -- Security context for the pod
+  securityContext: { }
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  # fsGroup: 1000
+
+# =============================================================================
+# Container Resources
+# =============================================================================
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# =============================================================================
+# Quay API Configuration (ConfigMap - not sensitive)
+# =============================================================================
+api:
+  # -- Quay API host (e.g., https://quay.example.com)
+  host: "http://127.0.0.1"
+  # -- Quay API port
+  port: "443"
+  # -- Quay API base path
+  basePath: "/api/v1"
+  # -- Authentication type: bearer, basic, or apikey
+  authType: "bearer"
+
+# =============================================================================
+# Secret Configuration (sensitive data only)
+# =============================================================================
+secrets:
+  # -- Name of the secret (generated if not set)
+  name: ""
+  # -- Use an existing secret instead of creating one (must contain API_TOKEN key)
+  existingSecret: ""
+  # -- API token (required if not using existingSecret)
+  apiToken: ""
+
+# =============================================================================
+# Pipeline Configuration
+# =============================================================================
+pipelines:
+  # -- Use an existing ConfigMap for pipeline structure (must contain pipeline.yaml key)
+  existingPipelineConfigMap: ""
+  # -- Use an existing ConfigMap for inputs (must contain inputs.yaml key)
+  existingInputsConfigMap: ""
+  # -- Mount path inside the container
+  mountPath: /app/pipelines
+
+  # -- Pipeline definition (pipeline.yaml content) - only used if existingPipelineConfigMap is not set
+  pipeline:
+    - name: create-organizations
+      job: create_organization
+      enabled: true
+      params_list: "{{ organizations }}"
+
+    - name: create-robot-accounts
+      job: create_robot_account
+      enabled: true
+      params_list: "{{ robot_accounts }}"
+
+    - name: create-teams
+      job: create_team
+      enabled: true
+      params_list: "{{ teams }}"
+
+    - name: add-team-members
+      job: add_team_member
+      enabled: true
+      params_list: "{{ team_members }}"
+
+    - name: sync-teams-ldap
+      job: sync_team_ldap
+      enabled: false
+      params_list: "{{ team_ldap_sync }}"
+
+  # -- Input data (inputs.yaml content) - only used if existingInputsConfigMap is not set
+  inputs:
+    organizations:
+      - name: example-org
+        email: admin@example.com
+
+    robot_accounts:
+      - organization: example-org
+        robot_shortname: ci-bot
+        description: CI automation bot
+
+    teams:
+      - organization: example-org
+        team_name: developers
+        role: creator
+        description: Development team
+
+    team_members:
+      - organization: example-org
+        team_name: developers
+        member_name: admin
+
+    # LDAP Team Sync (requires LDAP to be configured in Quay)
+    team_ldap_sync: []
+    # - organization: example-org
+    #   team_name: developers
+    #   group_dn: "cn=developers,ou=groups,dc=example,dc=com"
+
+# =============================================================================
+# Application Settings
+# =============================================================================
+settings:
+  # -- Enable debug mode (shows detailed logs and CURL commands)
+  debug: false
+  # -- Show CURL commands for API calls
+  showCurl: false
+  # -- API request timeout in seconds
+  timeout: 30
+  # -- Disable TLS certificate verification (not recommended for production)
+  disableTlsVerify: false
+
+# =============================================================================
+# Custom CA Bundle (for self-signed certificates)
+# =============================================================================
+caBundle:
+  # -- Enable custom CA bundle
+  enabled: false
+  # -- Name of the ConfigMap containing the CA bundle
+  configMapName: custom-ca-bundle
+  # -- Key in the ConfigMap
+  key: ca.crt
+  # -- Mount path for the CA bundle
+  mountPath: /etc/ssl/certs/custom-ca.pem

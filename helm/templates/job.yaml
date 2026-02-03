@@ -1,0 +1,141 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "quay-provisioner.fullname" . }}
+  labels:
+    {{- include "quay-provisioner.labels" . | nindent 4 }}
+    {{- with .Values.job.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.job.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  backoffLimit: {{ .Values.job.backoffLimit }}
+  {{- if .Values.job.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "quay-provisioner.selectorLabels" . | nindent 8 }}
+        {{- with .Values.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if not .Values.pipelines.existingPipelineConfigMap }}
+        checksum/pipeline: {{ include (print $.Template.BasePath "/pipeline-config.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if not .Values.pipelines.existingInputsConfigMap }}
+        checksum/inputs: {{ include (print $.Template.BasePath "/inputs-config.yaml") . | sha256sum }}
+        {{- end }}
+        checksum/api-config: {{ include (print $.Template.BasePath "/api-config.yaml") . | sha256sum }}
+        {{- with .Values.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "quay-provisioner.serviceAccountName" . }}
+      {{- with .Values.pod.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: {{ .Values.job.restartPolicy }}
+      containers:
+        - name: provisioner
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # --- API Configuration (from ConfigMap) ---
+            - name: API_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "quay-provisioner.fullname" . }}-api-config
+                  key: API_HOST
+            - name: API_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "quay-provisioner.fullname" . }}-api-config
+                  key: API_PORT
+            - name: API_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "quay-provisioner.fullname" . }}-api-config
+                  key: API_BASE_PATH
+            - name: API_AUTH_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "quay-provisioner.fullname" . }}-api-config
+                  key: API_AUTH_TYPE
+            # --- Secret (sensitive) ---
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "quay-provisioner.secretName" . }}
+                  key: API_TOKEN
+            # --- Application Settings ---
+            - name: DEBUG_ENABLED
+              value: {{ .Values.settings.debug | quote }}
+            - name: SHOW_CURL
+              value: {{ .Values.settings.showCurl | quote }}
+            - name: API_TIMEOUT
+              value: {{ .Values.settings.timeout | quote }}
+            - name: DISABLE_TLS_VERIFY
+              value: {{ .Values.settings.disableTlsVerify | quote }}
+            # --- Pipeline Path ---
+            - name: PIPELINE_FILE
+              value: "{{ .Values.pipelines.mountPath }}/pipeline.yaml"
+            - name: INPUTS_FILE
+              value: "{{ .Values.pipelines.mountPath }}/inputs.yaml"
+            {{- if .Values.caBundle.enabled }}
+            # --- Custom CA Bundle ---
+            - name: CA_BUNDLE
+              value: {{ .Values.caBundle.mountPath | quote }}
+            {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: pipeline
+              mountPath: {{ .Values.pipelines.mountPath }}/pipeline.yaml
+              subPath: pipeline.yaml
+              readOnly: true
+            - name: inputs
+              mountPath: {{ .Values.pipelines.mountPath }}/inputs.yaml
+              subPath: inputs.yaml
+              readOnly: true
+            {{- if .Values.caBundle.enabled }}
+            - name: ca-bundle
+              mountPath: {{ .Values.caBundle.mountPath }}
+              subPath: {{ .Values.caBundle.key }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: pipeline
+          configMap:
+            name: {{ include "quay-provisioner.pipelineConfigMapName" . }}
+        - name: inputs
+          configMap:
+            name: {{ include "quay-provisioner.inputsConfigMapName" . }}
+        {{- if .Values.caBundle.enabled }}
+        - name: ca-bundle
+          configMap:
+            name: {{ .Values.caBundle.configMapName }}
+        {{- end }}
+      {{- with .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

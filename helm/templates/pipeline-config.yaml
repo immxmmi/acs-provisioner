@@ -1,0 +1,23 @@
+{{- if not .Values.pipelines.existingPipelineConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "quay-provisioner.pipelineConfigMapName" . }}
+  labels:
+    {{- include "quay-provisioner.labels" . | nindent 4 }}
+data:
+  pipeline.yaml: |
+    pipeline:
+    {{- range .Values.pipelines.pipeline }}
+      - name: {{ .name }}
+        job: {{ .job }}
+        enabled: {{ .enabled }}
+        {{- if .params_list }}
+        params_list: "{{ .params_list }}"
+        {{- end }}
+        {{- if .params }}
+        params:
+          {{- toYaml .params | nindent 10 }}
+        {{- end }}
+    {{- end }}
+{{- end }}
